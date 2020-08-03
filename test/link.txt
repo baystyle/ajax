@@ -1,0 +1,5 @@
+FTP PATH: ftp://43.72.52.37/JJ%20Catering%20Menu%20at%20Canteen%201/2020/STTC_1/Lunch_Menu_16_07_2020/
+
+ftp://43.72.52.37/
+user : MFD
+password : Thailand2020
