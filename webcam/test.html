@@ -1,0 +1,120 @@
+<div class="row">
+    <div class="col-md-1">
+        <div id="startButton" class="button">
+            <button>Start</button>
+        </div>
+    </div>
+    <div class="col-md-1">
+        <div id="stopButton" class="button">
+            <button>Stop</button>
+        </div>
+    </div>
+    <div class="col-md-1">
+        <a id="downloadButton" class="button">
+            <button>Download</button>
+        </a>
+    </div>
+</div>
+
+
+<h2>Preview</h2>
+<video id="preview" width="500" autoplay muted></video>
+
+<h2>Recording</h2>
+<video id="recording" width="500"controls></video><br>
+        
+   
+
+<script>
+
+let preview = document.getElementById("preview");
+let recording = document.getElementById("recording");
+let startButton = document.getElementById("startButton");
+let stopButton = document.getElementById("stopButton");
+let downloadButton = document.getElementById("downloadButton");
+let logElement = document.getElementById("log");
+
+let recordingTimeMS = 10000;
+
+
+function log(msg) {
+    //logElement.innerHTML += msg + "\n";
+}
+
+function wait(delayInMS) {
+    return new Promise(resolve => setTimeout(resolve, delayInMS));
+}
+
+function startRecording(stream, lengthInMS) {
+    i=0
+    setInterval(() => {
+        i++
+        console.log(i);
+        if(i == 10)
+            console.log("save...");
+    },1000);
+    
+    let recorder = new MediaRecorder(stream);
+    let data = [];
+
+    recorder.ondataavailable = event => data.push(event.data);
+    recorder.start();
+    log(recorder.state + " for " + (lengthInMS/1000) + " seconds...");
+
+    let stopped = new Promise((resolve, reject) => {
+    recorder.onstop = resolve;
+    recorder.onerror = event => reject(event.name);
+    });
+
+    let recorded = wait(lengthInMS).then(
+    () => recorder.state == "recording" && recorder.stop()
+    );
+
+    return Promise.all([
+        stopped,
+        recorded
+    ])
+    .then(() => data);
+}
+
+function stop(stream) {
+    stream.getTracks().forEach(track => track.stop());
+}
+
+startButton.addEventListener("click", function() {
+    navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false
+    }).then(stream => {
+            preview.srcObject = stream;
+            downloadButton.href = stream;
+            preview.captureStream = preview.captureStream || preview.mozCaptureStream;
+            return new Promise(resolve => preview.onplaying = resolve);
+            }).then(() => startRecording(preview.captureStream(), recordingTimeMS))
+            .then (recordedChunks => {
+            let recordedBlob = new Blob(recordedChunks, { type: "video/webm" });
+            recording.src = URL.createObjectURL(recordedBlob);  
+            downloadButton.href = recording.src;
+            downloadButton.download = "RecordedVideo.mp4";
+
+            log("Successfully recorded " + recordedBlob.size + " bytes of " +
+                recordedBlob.type + " media.");
+            })
+            .catch(log);
+    }, false);
+
+
+    stopButton.addEventListener("click", function() {
+        recordingTimeMS = 0
+        console.log("===>"+recordingTimeMS);
+    stop(preview.srcObject);
+    }, false);
+
+</script>
+
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.1/css/bootstrap.min.css" integrity="sha384-VCmXjywReHh4PwowAiWNagnWcLhlEJLA5buUprzK8rxFgeH0kww/aWY76TfkUoSX" crossorigin="anonymous">
+
+<!-- JS, Popper.js, and jQuery -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.1/js/bootstrap.min.js" integrity="sha384-XEerZL0cuoUbHE4nZReLT7nx9gQrQreJekYhJD9WNWhH8nEW+0c5qq7aIo2Wl30J" crossorigin="anonymous"></script>
